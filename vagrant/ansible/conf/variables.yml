@@ -12,12 +12,12 @@ db:
   password: mysecretpassword
 
 app_props:
-  path: /home/ubuntu/demo1/src/main/resources
+  path: "/home/ubuntu/demo1/src/main/resources"
   template: "templates/application.properties.template.j2"
   properties: "/home/ubuntu/demo1/src/main/resources/application.properties"
 
 liquibase:
-  path: /home/ubuntu/demo1/liquibase
+  path: "/home/ubuntu/demo1/liquibase"
   bin_dir: "/home/ubuntu/demo1/liquibase/bin"
   template: "templates/liquibase.properties.template.j2"
   properties: "/home/ubuntu/demo1/liquibase/liquibase.properties"
@@ -29,10 +29,10 @@ s3:
   retries: 20
   jdk_filename: jdk-8u144-linux-x64.tar.gz
 
-project_dir: /home/ubuntu/demo1
-files_dir: /home/ubuntu/demo1/vagrant/ansible/playbooks/files
+project_dir: "/home/ubuntu/demo1"
+files_dir: "/home/ubuntu/demo1/vagrant/ansible/playbooks/files"
 
 jdk:
-  path: /usr/lib/jvm
+  path: "/usr/lib/jvm"
 
 postgres_jdbc_driver_url: "https://jdbc.postgresql.org/download/postgresql-42.1.4.jar"

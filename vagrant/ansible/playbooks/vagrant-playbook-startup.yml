@@ -11,4 +11,4 @@
       shell: "cd {{ project_dir }} && mvn clean package"
 
     - name: Run Java appliation
-      shell: "java -jar {{ project_dir }}/target/*.jar"
+      shell: "nohup java -jar {{ project_dir }}/target/*.jar > {{ project_dir }}/samsara.log  2>&1 &"

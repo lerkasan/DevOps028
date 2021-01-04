@@ -7,15 +7,22 @@
     - ../conf/variables.yml
     - ../conf/vault.yml
   tasks:
-    - pip:
-        name: boto
+    - name: Install pip
+      apt:
+        name: python3-pip
+        update_cache: yes
+        state: present
+
+    - name: Install boto3
+      pip:
+        name: boto3
 
     - name: Check if JDK8 is already downloaded
       stat: path={{ files_dir }}/jdk8.tar.gz
       register: jdk8_exists
 
     - name: Download JDK8 from AWS S3 bucket
-      s3:
+      aws_s3:
         bucket={{ s3.bucket_name }}
         region={{ s3.aws_region }}
         aws_access_key={{ aws_access_key }}
@@ -59,13 +66,10 @@
         mode: 0644
 
     - name: Install Maven, PostgreSQL, Python-Pip and MC
-      apt: pkg={{ item }} update_cache=yes cache_valid_time=3600
-      with_items:
-        - maven
-        - postgresql
-        - python-pip
-        - python-psycopg2
-        - mc
+      apt:
+        pkg: ['maven', 'postgresql', 'python-psycopg2', 'mc']
+        update_cache: yes
+        cache_valid_time: 3600
 
     - name: Make java from downloaded JDK8 prime alternative with the highest priority
       alternatives:
@@ -172,6 +176,7 @@
         encoding: UTF-8
         lc_collate: en_US.UTF-8
         lc_ctype: en_US.UTF-8
+        template: template0
 
     - name: Create user for database connectivity
       become: true

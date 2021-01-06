@@ -46,15 +46,11 @@
         dest: "{{ jdk.path }}"
         remote_src: yes
 
-    - name: Find exactc path to extracted JDK
+    - name: Find exact path to extracted JDK
       shell: "find '{{ jdk.path }}' -name java | grep -v openjdk | head -n 1 | rev | cut -c 10- | rev"
       register: jdk_home
 
-    - debug:
-        var=jdk_home.stdout
-
-    - debug:
-        var=vagrant_ip
+#    - debug: msg="JDK_HOME path = '{{ jdk_home.stdout }}'"
 
     - name: Add JAVA_HOME variable to /etc/environment file
       lineinfile:
@@ -85,28 +81,40 @@
         path: "{{ jdk_home.stdout }}/bin/javac"
         priority: 30000
 
-    - name: Obtain database URL from AWS RDS
-      rds:
-        command=facts
-        instance_name={{ db.instance }}
-        region={{ s3.aws_region }}
-        aws_access_key={{ aws_access_key }}
-        aws_secret_key={{ aws_secret_key }}
-      register: rds_facts
-      until: not(rds_facts.instance.endpoint is none)
-      retries: 20
-      delay: 30
+    - name: Create an AWS RDS instance
+      rds_instance:
+        db_instance_identifier: "{{ rds.instance }}"
+        db_instance_class: "{{ rds.class }}"
+        allocated_storage: "{{ rds.storage_size }}"
+        db_name: "{{ db.name }}"
+        region: "{{ rds.aws_region }}"
+        engine: "{{ rds.engine }}"
+        username: "{{ db.user }}"
+        password: "{{ db.password }}"
+        publicly_accessible: yes
+        skip_final_snapshot: yes
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+      when: database_location == "aws_rds"
+
+    - name: Get information about an RDS instance
+      rds_instance_info:
+        db_instance_identifier: "{{ rds.instance }}"
+        region: "{{ rds.aws_region }}"
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+      register: rds_info
       when: database_location == "aws_rds"
 
     - name: Set database URL from AWS RDS as db_host variable
       set_fact:
-        db_host: "{{ rds_facts.instance.endpoint }}"
+        db_host: "{{ rds_info.instances[0].endpoint.address }}"
       when: database_location == "aws_rds"
 
     - name: Set vagrant machine private_network ip as db_host variable
       set_fact:
         db_host: "{{ vagrant_ip }}"
-      when: database_location == "aws_rds"
+      when: database_location == "vagrant_local"
 
     - name: Generate application.properties from template using database endpoint variables
       template: src={{ app_props.template }} dest={{ app_props.properties }}
@@ -127,46 +135,46 @@
       when: database_location == "vagrant_local"
 
     - name: Add vagrant private_network IP-address as PostgreSQL listen_address
-      lineinfile:
-        path: "{{ postgres_conf_path.stdout }}"
-        regexp: "^#listen_addresses = 'localhost'"
-        line: "listen_addresses = '{{ vagrant_ip}}, 127.0.0.1'"
-        owner: postgres
-        group: postgres
-        mode: 0644
+      become: true
+      become_user: postgres
+      postgresql_set:
+        name: listen_addresses
+        value: "{{ vagrant_ip }}, 127.0.0.1"
       when: database_location == "vagrant_local"
 
     - name: Add custom port as PostgreSQL listen_port
-      lineinfile:
-        path: "{{ postgres_conf_path.stdout }}"
-        regexp: '^port = 5432'
-        line: "port = {{ db.port }}"
-        owner: postgres
-        group: postgres
-        mode: 0644
+      become: true
+      become_user: postgres
+      postgresql_set:
+        name: port
+        value: "{{ db.port }}"
       when: database_location == "vagrant_local"
 
     - name: Add permission for DB_USER to connect to DB_NAME from host machine by IP from vagrant private_network
-      lineinfile:
-        path: "{{ pg_hba_path.stdout }}"
-        insertafter: EOF
-        line: "host \t {{ db.name }} \t {{ db.user }} \t {{ vagrant_ip }}/24 \t md5"
-        owner: postgres
-        group: postgres
-        mode: 0644
+      postgresql_pg_hba:
+        dest: "{{ pg_hba_path.stdout }}"
+        databases: "{{ db.name }}"
+        contype: host
+        users: "{{ db.user }}"
+        source: "{{ vagrant_ip }}/24"
+        method: md5
       when: database_location == "vagrant_local"
 
     - name: Add permission for DB_USER to connect to DB_NAME from inside vagrant instance locally logined through ssh
-      lineinfile:
-        path: "{{ pg_hba_path.stdout }}"
-        insertafter: EOF
-        line: "host \t {{ db.name }} \t {{ db.user }} \t 127.0.0.1/32 \t md5"
-        owner: postgres
-        group: postgres
-        mode: 0644
+      postgresql_pg_hba:
+        dest: "{{ pg_hba_path.stdout }}"
+        databases: "{{ db.name }}"
+        contype: host
+        users: "{{ db.user }}"
+        source: "127.0.0.1/32"
+        method: md5
+      when: database_location == "vagrant_local"
 
     - name: Restart PostgreSQL
-      service: name=postgresql state=restarted
+      service:
+        name: postgresql
+        state: restarted
+      when: database_location == "vagrant_local"
 
     - name: Create PostgreSQL database
       become: true
@@ -177,6 +185,7 @@
         lc_collate: en_US.UTF-8
         lc_ctype: en_US.UTF-8
         template: template0
+      when: database_location == "vagrant_local"
 
     - name: Create user for database connectivity
       become: true
@@ -186,6 +195,7 @@
         name: "{{ db.user }}"
         password: "{{ db.password }}"
         priv: "ALL"
+      when: database_location == "vagrant_local"
 
     - name: Create directory where liquibase binaries will be downloaded
       file:
@@ -226,8 +236,7 @@
       shell: "cd {{ liquibase.bin_dir }} && ./liquibase update"
 
     - name: Create jar artifact using maven package
-      # command: chdir={{ project_dir }} "mvn clean package"
       shell: "cd {{ project_dir }} && mvn clean package"
 
     - name: Run Java appliation
-      shell: "java -jar {{ project_dir }}/target/*.jar"
+      shell: "nohup java -jar {{ project_dir }}/target/*.jar > {{ project_dir }}/samsara.log  2>&1 &"

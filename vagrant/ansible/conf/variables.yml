@@ -1,11 +1,11 @@
-database_location: vagrant_local
-# alternative database_location: aws_rds
+# database_location: vagrant_local
+#alternative database_location: aws_rds
+database_location: aws_rds
 
 vagrant_ip: "{{ ansible_all_ipv4_addresses[0] }}"
 db_host: "{{ ansible_all_ipv4_addresses[0] }}"
 
 db:
-  instance: vagrantdemo
   port: 5432
   name: auradb
   user: aura
@@ -28,6 +28,14 @@ s3:
   aws_region: us-west-2
   retries: 20
   jdk_filename: jdk-8u144-linux-x64.tar.gz
+
+rds:
+  aws_region: us-west-2
+  instance: vagrantdemo
+  class: db.t2.micro
+  storage_size: 5
+  engine: postgres
+
 
 project_dir: "/home/ubuntu/demo1"
 files_dir: "/home/ubuntu/demo1/vagrant/ansible/playbooks/files"

@@ -9,7 +9,7 @@
   tasks:
     - name: Install pip
       apt:
-        name: python3-pip
+        pkg: ['python3-pip', 'python-pip']
         update_cache: yes
         state: present
 
@@ -74,12 +74,13 @@
         path: "{{ jdk_home.stdout }}/bin/java"
         priority: 30000
 
-    - name: Make javac from downloaded JDK8 prime alternative with the highest priority
-      alternatives:
-        name: javac
-        link: /usr/bin/javac
-        path: "{{ jdk_home.stdout }}/bin/javac"
-        priority: 30000
+# Started causing error file not found, however javac file exists in extracted folder
+#    - name: Make javac from downloaded JDK8 prime alternative with the highest priority
+#      alternatives:
+#        name: javac
+#        link: /usr/bin/javac
+#        path: "{{ jdk_home.stdout }}/bin/javac"
+#        priority: 30000
 
     - name: Create an AWS RDS instance
       rds_instance:

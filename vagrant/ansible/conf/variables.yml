@@ -1,6 +1,5 @@
-# database_location: vagrant_local
-#alternative database_location: aws_rds
-database_location: aws_rds
+# possible options for database_location: aws_rds or vagrant_local
+database_location: vagrant_local
 
 vagrant_ip: "{{ ansible_all_ipv4_addresses[0] }}"
 db_host: "{{ ansible_all_ipv4_addresses[0] }}"

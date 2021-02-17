@@ -94,3 +94,4 @@ credentials
 tmp
 /infra/initial/terraform.tfstate
 /infra/initial/terraform.tfstate.backup
+/terraform/.terraform.lock.hcl

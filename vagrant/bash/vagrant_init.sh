@@ -48,6 +48,10 @@ POSTGRES_JDBC_DRIVER_FILENAME="postgresql-42.1.4.jar"
 DOWNLOAD_DIR="/home/${OS_USERNAME}/${DEMO_DIR}/download"
 DOWNLOAD_RETRIES=5
 
+# Requires three arguments:
+# string $1 - URL of file to be downloaded
+# string $2 - full path to folder where downloaded file should be saved
+# int $3    - number of download retries
 function download_from_s3 {
 #    let RETRIES=$3
     (( RETRIES=$3 ))
